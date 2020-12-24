@@ -1,0 +1,131 @@
+View Code:
+        <style>
+            .a1 {
+                text-align: center;
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+
+            .btn {
+                background-color: #1db0b8;
+                border: 1px solid #1db0b8;
+                color: white;
+                width: 270px;
+            }
+
+            .a2 {
+                text-align: center;
+            }
+        </style>
+
+		<a class="easyui-linkbutton" data-options="iconCls:'fa fa-plus',plain:true" onclick="$('#append_file').window('open')">批量添加</a>
+
+		<div id="append_file" class="easyui-window" title="<center>批量添加学生</center>" style="width:400px;height:200px;padding: 10px;"
+            data-options="
+                        modal:true,
+                        closed:true,
+                        draggable:false,
+                        minimizable:false,
+                        maximizable:false,
+                        collapsible:false">
+            @using (Html.BeginForm("Add_Stu_File", "Teacher", new { sid = ViewBag.id }, FormMethod.Post, new { enctype = "multipart/form-data" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.ValidationSummary()
+                <div id="updatebtn" class="a1">
+                    <a class="easyui-linkbutton btn" aria-hidden="true" title="下载" onclick="window.open('../../Fileheader/StuInfo.csv')">下载示例文件</a>
+                </div>
+                <div id="updatebtn" class="a2">
+                    <a class="easyui-filebox" id="dataFile" name="upload" data-options="buttonText:'选择文件上传', width:270"></a>
+                    <input type="submit" value="上传" class="btn btn-default" style="width:270px;height:30px;"/ >
+                </div>
+            }
+        </div>
+
+
+Controller Code:
+
+		[HttpPost]
+        public ActionResult Add_Stu_File(HttpPostedFileBase upload, long sid)
+        {
+
+            var filename = Path.GetFileName(upload.FileName);
+            var path = Path.Combine(Server.MapPath("~/Temp"), filename);
+            upload.SaveAs(path);
+
+            var li = db.stu_info;
+            var cli = db.stu_class;
+            long? cid = db.@class.Find(sid).teacher_info.college_id;
+
+            var res = "";
+            FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+            StreamReader sr = new StreamReader(fs, System.Text.Encoding.GetEncoding("GBK"));
+
+            string str = "";
+            int i = 0;
+            using (TransactionScope transaction = new TransactionScope())
+            {
+                using (Entities db = new Entities())
+                {
+                    while (str != null)
+                    {
+                        str = sr.ReadLine();
+                        if (str == null)
+                            break;
+                        string[] stu = str.Split(',');
+                        string stu_id = stu[0];
+                        string stu_name = stu[1].Replace("\"", "");//过滤双引号
+                        if (i != 0)//过滤表头
+                        {
+                            var query = (from q in li where (q.stu_num == stu_id) && (q.college_id == cid) select q).SingleOrDefault();
+                            if (query != null)
+                            {
+                                var newquery = (from cq in cli where (cq.stu_id == query.id) && (cq.class_id == sid) select cq).SingleOrDefault();
+                                if (newquery == null)
+                                {
+                                    stu_class sc = new stu_class
+                                    {
+                                        stu_id = query.id,
+                                        class_id = sid
+                                    };
+                                    db.stu_class.Add(sc);
+                                }
+                            }
+                            else
+                            {
+                                stu_info sstu = new stu_info
+                                {
+                                    stu_num = stu_id,
+                                    pass = "123456",
+                                    college_id = cid,
+                                    name = stu_name
+                                };
+                                db.stu_info.Add(sstu);
+                                db.SaveChanges();
+
+                                stu_class sc = new stu_class
+                                {
+                                    stu_id = sstu.id,
+                                    class_id = sid
+                                };
+                                db.stu_class.Add(sc);
+                            }
+                        }
+                        i++;
+                    }
+
+                    try
+                    {
+                        db.SaveChanges();
+                        transaction.Complete();
+                    }
+                    catch (DbEntityValidationException w)
+                    {
+                        res = tf.AnalyseError(w);
+                    }
+                }
+            }
+            fs.Close();
+            sr.Close();
+            return RedirectToAction("StuClass", "Teacher", new { id = sid });
+        }

@@ -1,0 +1,54 @@
+View Code:
+
+        <td class="easyui-linkbutton" data-options="iconCls:'fa fa-times'" onclick="$('#resetpass').window('open')">重置密码</td>
+
+            <div id="resetpass" class="easyui-window" title="<center>重置密码</center>" style="width:400px;height:200px;"
+                 data-options="
+                 modal:true,
+                 draggable:false,
+                 collapsible:false,
+                 minimizable:false,
+                 maximizable:false,
+                 closed:true,
+                 resizable:false ">
+                <div class="easyui-layout" data-options="fit:true">
+                    @using (Ajax.BeginForm("Resetpass", "Teacher", new AjaxOptions()
+                        {
+                            HttpMethod = "Post",
+                            OnSuccess = "updateSuccess",
+                            OnFailure = "updateFailed",
+                            OnComplete = "updateComplete"
+                        })) {
+                        <div data-options="region:'center'" style="padding: 10px">
+                            @Html.TextBoxFor(model => model.id, new { @id = "account_id", @type = "hidden" })
+                            <table cellpadding="10px">
+                                <tr>
+                                    <td style="width:100px">密码</td>
+                                    <td>@Html.TextBoxFor(model => model.pass, new { @Value = "1234", @class = "easyui-textbox", @required = "required" }) </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div id="tinfosouthbtn" data-options="region:'south',border:false" style="height: 45px">
+                            <button class="easyui-linkbutton" data-options="iconCls:'fa fa-floppy-o'" type="submit" onclick="$('#resetpass').window('close')" style="width: auto">确认</button>
+
+                        </div>
+                    }
+                </div>
+            </div>
+
+
+
+Controller Code:
+
+        [HttpPost]
+        public ActionResult Resetpass(teacher_info teacher) {
+            var res = "";
+            teacher_info tea = db.teacher_info.Find(teacher.id);
+            tea.pass = teacher.pass;
+            db.Entry(tea).State = EntityState.Modified;
+            try { db.SaveChanges(); }
+            catch (DbEntityValidationException e) {
+                res = tf.AnalyseError(e);
+            }
+            return Content(res);
+        }
