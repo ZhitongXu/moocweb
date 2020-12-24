@@ -1,0 +1,92 @@
+﻿<head>
+    <meta charset="utf-8">
+    <title>handsontable demo</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
+</head>
+
+@using (Html.BeginForm("Upload", "Home", null, FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary()
+
+    <div class="form-group">
+        <input type="file" id="dataFile" name="upload" />
+    </div>
+
+    <div class="form-group">
+        <input type="submit" value="Upload" class="btn btn-default" />
+    </div>
+
+    <div id="example">
+        <input type="submit" value="Export" id="export-file" class="btn btn-default" />
+    </div>
+
+
+}
+
+<script type="text/javascript">
+    
+    var data = @Html.Raw(@ViewBag.JsonString);
+    function negativeValueRenderer(instance, td, row, col, prop, value, cellProperties) {
+        Handsontable.renderers.TextRenderer.apply(this, arguments);
+    }
+    Handsontable.renderers.registerRenderer('negativeValueRenderer', negativeValueRenderer);
+
+    var hot = new Handsontable(document.getElementById('example'), {
+        data: data,
+        colHeaders: true, // 使用自定义列头
+        licenseKey: 'non-commercial-and-evaluation',
+        rowHeaders: true,
+        colWidths: 150, // 设置所有列宽为150像素
+        filters: true,
+        columnSorting: true,
+        sortIndicator: true,
+        autoColumnSize: true,
+        manualColumnResize: true,
+        undo: true,
+        redo: true,
+        wordWrap: true,
+        copyable: true,
+        mergeCells: false,
+        manualRowResize: true,
+        manualRowMove: true,
+        manualColumnMove: false,
+        renderAllRows: true,
+        allowInsertRow: true,
+        allowInsertColumn: false,
+        fixedColumnsLeft: 1,
+        exportFile: true,
+        contextMenu: ['row_above', 'row_below', '---------', 'remove_row', '---------', 'undo', 'redo', '---------', 'make_read_only', '---------', 'alignment'],
+        manualColumnMove: true,
+        cells: function (row, col, prop) {
+            var cellProperties = {};
+            cellProperties.renderer = "negativeValueRenderer";
+            return cellProperties;
+        },
+
+    }
+    );
+
+    var button = document.getElementById('export-file');
+    var exportPlugin = hot.getPlugin('exportFile');
+
+    button.addEventListener('click', function() {
+        exportPlugin.downloadFile('csv', {
+          bom: false,
+          columnDelimiter: ',',
+          columnHeaders: false,
+          exportHiddenColumns: true,
+          exportHiddenRows: true,
+          fileExtension: 'csv',
+          filename: 'test',
+          mimeType: 'text/csv',
+          rowDelimiter: '\r\n',
+          rowHeaders: true
+        });
+    });
+
+</script>
+
+
